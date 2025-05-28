@@ -8,6 +8,7 @@ from datetime import datetime
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 import requests
+import altair as alt 
 
 ACCESS_KEY = os.getenv("LAKEFS_ACCESS_KEY_ID", "access_key")
 SECRET_KEY = os.getenv("LAKEFS_SECRET_ACCESS_KEY", "secret_key")
@@ -62,8 +63,8 @@ def load_data_from_lakefs(s3_path, storage_opts):
 
 def create_sidebar():
     auto_refresh = st.sidebar.checkbox('Enable Auto-refresh', value=True)
-    refresh_interval = st.sidebar.slider('Refresh Interval (s)', 5, 120, REFRESH_INTERVAL_DEFAULT)
-    contamination_factor = st.sidebar.slider('Anomaly Sensitivity (%)', 1, 25, ANOMALY_SENSITIVITY_DEFAULT) / 100
+    refresh_interval = st.sidebar.slider('Refresh Interval (s)', 5, 100, REFRESH_INTERVAL_DEFAULT)
+    contamination_factor = st.sidebar.slider('Anomaly Sensitivity (%)', 1, 30, ANOMALY_SENSITIVITY_DEFAULT) / 100
     st.sidebar.caption(f"UTC: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}")
     return auto_refresh, refresh_interval, contamination_factor
 
@@ -72,34 +73,55 @@ def display_metrics(latest_data_row, anomaly_status):
     power = latest_data_row.get(POWER_COLUMN, "N/A")
     temp = latest_data_row.get(TEMP_COLUMN, "N/A")
     disp_time = latest_data_row.get(DISPLAY_TIME_COLUMN, "N/A")
-    col1.metric("⚡ Power Output", f"{power:,.1f} MW" if pd.notna(power) else "N/A")
-    col2.metric("🌡️ Temperature", f"{temp:.1f}°C" if pd.notna(temp) else "N/A")
-    col3.metric("🕒 Source Time", str(disp_time))
+    col1.metric("Power Output", f"{power:,.1f} MW" if pd.notna(power) else "N/A")
+    col2.metric("Temperature", f"{temp:.1f}°C" if pd.notna(temp) else "N/A")
+    col3.metric("Source Time", str(disp_time))
     col4.error("⚠️ Anomaly" if anomaly_status else "✅ Normal")
 
-def display_charts(chart_data):
-    chart_col1, chart_col2 = st.columns(2)
-    with chart_col1:
-        st.subheader(f"⚡ {POWER_COLUMN}")
-        st.line_chart(chart_data.set_index(TIMESTAMP_COLUMN)[POWER_COLUMN], height=300)
-    with chart_col2:
-        st.subheader(f"🌡️ {TEMP_COLUMN}")
-        st.line_chart(chart_data.set_index(TIMESTAMP_COLUMN)[TEMP_COLUMN], height=300)
 
-def display_statistics(anomalies, chart_data):
-    st.subheader("📊 Chart Data Statistics")
+def display_charts_and_statistics(chart_data, anomalies):
+    # แสดง Chart Data Statistics
+    st.subheader("Chart Data Statistics")
     cols = st.columns(4)
     total_anomalies = anomalies.sum()
     anomaly_rate = (total_anomalies / len(anomalies)) * 100 if len(anomalies) > 0 else 0
-    avg_power = chart_data[POWER_COLUMN].mean()
-    peak_power = chart_data[POWER_COLUMN].max()
+    avg_power = chart_data['current_value_MW'].mean()
+    peak_power = chart_data['current_value_MW'].max()
     cols[0].metric("Anomalies", f"{int(total_anomalies)}")
     cols[1].metric("Anomaly Rate", f"{anomaly_rate:.1f}%")
     cols[2].metric("Avg Power", f"{avg_power:,.1f} MW")
     cols[3].metric("Peak Power", f"{peak_power:,.1f} MW")
 
+    st.markdown("---")
+
+    # กราฟเดิม: Power / Temperature แยกกัน
+    chart_col1, chart_col2 = st.columns(2)
+
+    with chart_col1:
+        st.subheader("Power & Temperature Trend")
+        base = alt.Chart(chart_data).encode(x='scrape_timestamp_utc:T')
+        power_line = base.mark_line(color='blue').encode(
+          y=alt.Y('current_value_MW:Q', axis=alt.Axis(title="Power (MW)"))
+     )
+        temp_line = base.mark_line(color='red').encode(
+         y=alt.Y('temperature_C:Q', axis=alt.Axis(title="Temperature (°C)"))
+      )
+        dual_chart = alt.layer(power_line, temp_line).resolve_scale(y='independent').properties(height=300)
+        st.altair_chart(dual_chart, use_container_width=True)
+
+    with chart_col2:
+        st.subheader("Scatter Plot: Power vs Temperature")
+        scatter = alt.Chart(chart_data).mark_circle(size=60, opacity=0.7).encode(
+         x=alt.X('temperature_C:Q', title="Temperature (°C)", scale=alt.Scale(domain=[25, 40])),
+            y=alt.Y('current_value_MW:Q', title="Power Output (MW)", scale=alt.Scale(domain=[20000, 30000])),
+            tooltip=['scrape_timestamp_utc', 'current_value_MW', 'temperature_C']
+        ).properties(height=300)
+
+        st.altair_chart(scatter, use_container_width=True)
+    
+
 def display_recent_data_table(df_all_data, anomalies):
-    st.subheader("📝 Recent Data (Latest 10)")
+    st.subheader("Recent Data (Latest 10)")
     df_display = df_all_data.head(10).copy()
     df_display['Status'] = ['⚠️ Anomaly' if anom else '✅ Normal' for anom in anomalies[:len(df_display)]]
     cols = [TIMESTAMP_COLUMN, DISPLAY_TIME_COLUMN, POWER_COLUMN, TEMP_COLUMN, 'Status']
@@ -107,7 +129,7 @@ def display_recent_data_table(df_all_data, anomalies):
     st.dataframe(df_display[existing_cols], hide_index=True)
 
 def run_app():
-    st.title("⚡ EGAT Realtime Power Generation Dashboard (via lakeFS)")
+    st.title("EGAT Realtime Power Generation Dashboard (via lakeFS)")
     auto_refresh, refresh_interval, contamination = create_sidebar()
     last_refresh_ph = st.empty()
     metrics_ph = st.container()
@@ -122,11 +144,13 @@ def run_app():
 
     with metrics_ph:
         display_metrics(latest_row, anomaly_latest)
+        st.markdown("---")
     with table_ph:
         display_recent_data_table(df_all_data, anomalies_chart)
+        st.markdown("---")
     with charts_stats_ph:
-        display_charts(chart_data)
-        display_statistics(anomalies_chart, chart_data)
+        display_charts_and_statistics(chart_data, anomalies_chart)
+ 
 
     last_refresh_ph.caption(f"Dashboard refreshed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
