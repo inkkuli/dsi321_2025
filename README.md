@@ -40,7 +40,7 @@ This Python-based application retrieves live electricity generation data from th
 | No columns with 'object' data types | Confirms correct data typing       | ✅ Passed |
 | No duplicate records                | Guarantees record uniqueness       | ✅ Passed |
 
-> **Dataset location**: `parquet/egat_realtime_power_history.parquet`
+> **Dataset location**: `data/egat_realtime.parquet`
 
 ---
 
