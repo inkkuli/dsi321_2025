@@ -1,6 +1,4 @@
-Sure! Here's your rewritten version in English with improved wording and clarity while keeping the original meaning and structure:
 
----
 
 # **EGAT Real-time Power Generation Scraper**
 
@@ -153,6 +151,4 @@ Run the Streamlit UI:
 streamlit run UI/streamlit_app.py
 ```
 
----
 
-Let me know if you’d like a PDF or markdown version.
