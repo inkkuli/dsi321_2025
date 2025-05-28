@@ -1,95 +1,158 @@
+Sure! Here's your rewritten version in English with improved wording and clarity while keeping the original meaning and structure:
 
 ---
 
-## **EGAT Real-time Power Generation Scraper**
+# **EGAT Real-time Power Generation Scraper**
 
-This Python script is designed to extract real-time power generation data from the Electricity Generating Authority of Thailand (EGAT) website at [https://www.sothailand.com/sysgen/egat/](https://www.sothailand.com/sysgen/egat/). It utilizes **Selenium** to interact with the website and read data from the **Console Log**, which the website uses to dynamically update data. The extracted data is continuously saved into a **CSV file** at specified intervals.
+## **Overview**
+
+This Python-based application retrieves live electricity generation data from the Electricity Generating Authority of Thailand (EGAT) via the URL [https://www.sothailand.com/sysgen/egat/](https://www.sothailand.com/sysgen/egat/). Utilizing Selenium, the script extracts real-time values directly from the browser’s developer console logs, where the site dynamically emits updated data. It is designed for continuous operation, capturing new entries at user-defined intervals.
 
 ---
 
-### 📁 **Project Structure**
+## **Key Benefits**
+
+* **Live Monitoring**
+  Continuously collects real-time electricity generation data from EGAT, offering immediate insights into Thailand’s national grid performance.
+
+* **Automated Data Collection**
+  Automatically scrapes and stores data on a set schedule, reducing manual effort and ensuring a consistent historical log.
+
+* **Forecasting Enablement**
+  Supports predictive modeling for electricity demand and supply, helping optimize energy planning and distribution strategies.
+
+* **Interactive Visualization**
+  Displays real-time trends through an intuitive Streamlit dashboard, accessible to both technical and non-technical audiences.
+
+* **Advanced Scraping Technique**
+  Demonstrates a sophisticated scraping approach by capturing dynamic JavaScript-driven content from browser console logs using Selenium.
+
+* **Time-Series Analysis**
+  Creates a rich dataset suitable for trend analysis, anomaly detection, and operational planning.
+
+---
+
+## **Dataset Quality Checks**
+
+| Criteria                            | Description                        | Status   |
+| ----------------------------------- | ---------------------------------- | -------- |
+| Minimum of 1,000 records            | Ensures adequate data volume       | ✅ Passed |
+| Full 24-hour coverage               | Verifies complete daily data range | ✅ Passed |
+| At least 90% data completeness      | Minimal missing or null values     | ✅ Passed |
+| No columns with 'object' data types | Confirms correct data typing       | ✅ Passed |
+| No duplicate records                | Guarantees record uniqueness       | ✅ Passed |
+
+> **Dataset location**: `parquet/egat_realtime_power_history.parquet`
+
+---
+
+## **Project Structure**
 
 ```
-egat-scraper-project/
-├── src/
-│   ├── __init__.py
-│   ├── scraper/
-│   │   ├── __init__.py
-│   │   └── egat_scraper.py        # Contains EGATRealTimeScraper class
-│   ├── config.py                  # Configuration settings
-│   ├── tasks.py                   # Prefect task definitions
-│   └── flows.py                   # Prefect flow definitions
-├── notebooks/
-│   └── run_scraper_and_save_to_lakefs.ipynb  # Your original notebook for reference
-├── run_scheduled_flow.py          # Script to run/deploy the Prefect flow
-├── requirements.txt               # Project dependencies
-├── docker-compose.yml             # Existing docker-compose
-└── .env                           # For environment variables (you'll create this)
+DSI321_2025/
+├── __pycache__/
+│   └── egat_pipeline.cpython-312.pyc
+├── data/
+│   └── egat_realtime.parquet
+├── test-scraping/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run_scraper_and_save_to_lakefs.ipynb
+├── UI/
+│   └── streamlit_app.py
+├── docker-compose.yml
+├── egat_pipeline.py
+├── quality_check.py
+├── prefect.yaml
+└── README.md
 ```
 
 ---
 
-### 🌟 **Key Features**
+## **Technology Stack**
 
-* **Real-time scraping**: Records live power generation (MW) and temperature values.
-* **Reads from Console Log**: Uses a specialized technique to extract messages logged by JavaScript in the browser console instead of parsing HTML.
-* **Supports Headless Mode**: Runs Chrome in headless mode via Selenium for performance and background execution.
-* **Automatic ChromeDriver management**: Uses `webdriver-manager` to avoid manual installation of the driver.
-* **CSV storage**: Appends extracted data into a CSV file with a timestamp.
-* **Supports continuous operation**: Can run in a loop at regular intervals.
-* **Built-in logging**: Logs events for analysis or troubleshooting during execution.
-
----
-
-### ⚙️ **How It Works**
-
-The website [https://www.sothailand.com/sysgen/egat/](https://www.sothailand.com/sysgen/egat/) displays real-time power data. JavaScript on the page updates the power output (in MW) and temperature values and logs them in the Console. This script extracts the data by monitoring console messages using the following steps:
-
-1. **Initialize WebDriver**: Launches Chrome in headless mode with logging enabled.
-2. **Load the target website**.
-3. **Wait for data to load**: Allows time for JavaScript to execute.
-4. **Extract from Console**: Looks for messages that start with `updateMessageArea:` in the log.
-5. **Parse and format data**: Uses regex to extract key fields (timestamp, MW, temp, etc.).
-6. **Save to CSV**: Converts to a dictionary and appends to a CSV file.
-7. **Repeat (if enabled)**: Runs continuously every *n* seconds if `scrape_continuously` is set.
-8. **Properly shut down WebDriver**: Ensures Chrome closes cleanly after stopping.
+* **Web Scraping**: `Selenium`, `webdriver_manager`
+* **Data Validation**: `Pydantic`
+* **Data Storage**: `lakeFS`
+* **Workflow Orchestration**: `Prefect`
+* **Visualization**: `Streamlit`
+* **CI/CD Pipeline**: `GitHub Actions`
 
 ---
 
-### 🧰 **Prerequisites**
+## **System Requirements**
 
-* Python 3.7+
-* Google Chrome installed
+* Docker-supported system
+* Internet access for EGAT data source
+* Minimum 4 GB RAM
+* Available port (e.g., `localhost:4200`) for Prefect UI
 
 ---
 
-### 🛠️ **Installation & Setup**
+## **Setup Instructions**
 
-Clone the repository (if applicable) or download the script files:
+1. **Create Virtual Environment**
+
+   ```bash
+   python -m venv .venv
+   ```
+
+2. **Install Dependencies**
+
+   ```bash
+   # Windows
+   pip install -r test_scraping\requirements.txt
+
+   # macOS/Linux
+   pip install -r test_scraping/requirements.txt
+   ```
+
+3. **Activate Virtual Environment**
+
+   ```bash
+   # Windows
+   .venv\Scripts\activate
+
+   # macOS/Linux
+   source .venv/bin/activate
+   ```
+
+---
+
+## **Running Prefect**
+
+1. **Fix PREFECT\_API\_URL (if error appears)**
+
+   ```bash
+   # Windows
+   $env:PREFECT_API_URL = "http://127.0.0.1:4200/api"
+
+   # macOS/Linux
+   export PREFECT_API_URL="http://127.0.0.1:4200/api"
+   ```
+
+2. **Deploy Workflow**
+
+   ```bash
+   prefect deploy
+   ```
+
+3. **Start Worker**
+
+   ```bash
+   prefect worker start --pool 'default-agent-pool' --work-queue 'default'
+   ```
+
+---
+
+## **Launch Dashboard**
+
+Run the Streamlit UI:
 
 ```bash
-# If it's a repository:
-git clone <repository_url>
-cd <repository_directory>
-```
-
-Create a virtual environment:
-
-```bash
-python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-```
-
-Install required packages:
-
-```bash
-pip install pandas selenium webdriver-manager
-```
-
-Or run:
-
-```bash
-pip install -r requirements.txt
+streamlit run UI/streamlit_app.py
 ```
 
 ---
+
+Let me know if you’d like a PDF or markdown version.
